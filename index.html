@@ -1,11 +1,23 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh">
+
 <head>
   <meta charset="UTF-8">
-  <title>测试页面</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/favicon.svg">
+  <title>妙搭</title>
+  <script>
+    try {
+      window.__platform__ = JSON.parse('{{{__platform__}}}');
+    } catch (e) {
+      console.error('Failed to parse __platform__', e);
+    }
+  </script>
 </head>
+
 <body>
-  <h1>终于能看到内容啦！🎉</h1>
-  <p>如果能看到这句话，说明部署成功了！</p>
+  <div id="root"></div>
+  <script type="module" src="/client/src/index.tsx"></script>
 </body>
+
 </html>
