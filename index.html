@@ -2,125 +2,61 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>任务管理系统-筛选修复版</title>
+  <title>任务管理系统</title>
   <style>
     * {margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif;}
     body {background:#f5f7fa;padding:20px;}
     .container {max-width:1200px;margin:0 auto;background:white;padding:30px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1);}
-    h2 {margin-bottom:20px;color:#333;}
-    .form-grid {display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:30px;}
-    .form-group {display:flex;flex-direction:column;gap:5px;}
-    label {font-weight:bold;font-size:14px;}
-    input, select {padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px;}
-    textarea {padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px;min-height:80px;resize:vertical;}
-    button {padding:10px 20px;background:#007bff;color:white;border:none;border-radius:6px;cursor:pointer;}
-    button:hover {background:#005cbf;}
+    .top-bar {display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+    .top-bar h2 {color:#333;}
+    .btn-add {background:#28a745;color:white;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;}
     .filter-bar {display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid #eee;}
+    select, input {padding:10px;border:1px solid #ddd;border-radius:6px;min-width:160px;}
+    button {padding:10px 20px;background:#007bff;color:white;border:none;border-radius:6px;cursor:pointer;}
     table {width:100%;border-collapse:collapse;margin-top:10px;}
-    th, td {padding:10px;border:1px solid #ddd;text-align:left;font-size:13px;}
+    th, td {padding:10px;border:1px solid #ddd;text-align:left;font-size:14px;}
     th {background:#f0f0f0;}
-    .edit-btn {padding:5px 10px;background:#28a745;color:white;border:none;border-radius:4px;cursor:pointer;}
-    .reset-btn {background:#6c757d;}
-    .content-col {max-width:200px;white-space:pre-line;word-break:break-all;}
-    /* 进度条样式 */
-    .progress-wrap {display:flex;align-items:center;gap:10px;}
-    input[type="range"] {width:100%;}
-    /* 弹窗样式 */
+    .edit-btn {padding:6px 12px;background:#007bff;color:white;border:none;border-radius:4px;cursor:pointer;}
+    .content-col {max-width:220px;white-space:pre-line;word-break:break-all;}
+    
+    /* 弹窗 */
     .modal {position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:999;}
     .modal-box {background:white;padding:25px;border-radius:10px;width:90%;max-width:900px;max-height:90vh;overflow-y:auto;}
     .modal h3 {margin-bottom:15px;}
+    .form-grid {display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:20px;}
+    .form-group {display:flex;flex-direction:column;gap:5px;}
+    label {font-weight:bold;font-size:14px;}
+    textarea {padding:10px;border:1px solid #ddd;border-radius:6px;min-height:80px;resize:vertical;}
+    input[type="range"] {width:100%;}
     .modal-btn-group {margin-top:20px;display:flex;gap:10px;}
     .close-btn {background:#6c757d;}
   </style>
 </head>
 <body>
+
 <div class="container">
-  <h2>新建 / 编辑 任务</h2>
-
-  <!-- 新建任务表单 -->
-  <div class="form-grid">
-    <div class="form-group"><label>客户名称</label><input id="customer" type="text"></div>
-    <div class="form-group"><label>设备类型</label><input id="deviceType" type="text"></div>
-    <div class="form-group"><label>设备编号</label><input id="deviceCode" type="text"></div>
-    <div class="form-group"><label>设备序列号</label><input id="serial" type="text"></div>
-    <div class="form-group"><label>负责人</label><input id="manager" type="text"></div>
-    <div class="form-group">
-      <label>任务层级（1-5）</label>
-      <select id="level">
-        <option>1</option>
-        <option>2</option>
-        <option>3</option>
-        <option>4</option>
-        <option>5</option>
-      </select>
-    </div>
-
-    <div class="form-group" style="grid-column: span 2;">
-      <label>任务内容</label>
-      <textarea id="taskContent" placeholder="请输入详细任务内容"></textarea>
-    </div>
-
-    <div class="form-group">
-      <label>计划开始时间</label>
-      <input id="planStart" type="date" onchange="calcPlanDays()">
-    </div>
-    <div class="form-group">
-      <label>计划结束时间</label>
-      <input id="planEnd" type="date" onchange="calcPlanDays()">
-    </div>
-    <div class="form-group">
-      <label>计划工期（天，自动计算）</label>
-      <input id="planHour" type="text" readonly placeholder="自动计算天数">
-    </div>
-    <div class="form-group"><label>实际开始时间</label><input id="realStart" type="date"></div>
-    <div class="form-group"><label>实际结束时间</label><input id="realEnd" type="date"></div>
-    <div class="form-group"><label>实际工期</label><input id="realHour" type="text" placeholder="自行填写"></div>
-
-    <!-- 进度条拖动设置 -->
-    <div class="form-group">
-      <label>任务进度：<span id="progressText">0%</span></label>
-      <div class="progress-wrap">
-        <input type="range" id="progress" min="0" max="100" value="0" oninput="showProgress()">
-      </div>
-    </div>
-
-    <!-- 状态下拉 新增全部选项 -->
-    <div class="form-group">
-      <label>任务状态</label>
-      <select id="status">
-        <option>待开始</option>
-        <option>进行中</option>
-        <option>已逾期</option>
-        <option>已完成</option>
-        <option>暂停中</option>
-        <option>已取消</option>
-      </select>
-    </div>
+  <div class="top-bar">
+    <h2>任务管理系统</h2>
+    <button class="btn-add" onclick="openNewTask()">新建任务</button>
   </div>
 
-  <button onclick="saveTask()">保存任务</button>
-
-  <!-- 筛选栏（新增重置按钮） -->
-  <div class="filter-bar" style="margin-top:30px;">
-    <input id="fCustomer" placeholder="筛选：客户名称（模糊）" type="text">
+  <!-- 筛选栏：客户下拉 + 层级下拉 -->
+  <div class="filter-bar">
+    <select id="fCustomer">
+      <option value="">全部客户</option>
+    </select>
     <select id="fLevel">
       <option value="">全部层级</option>
-      <option>1</option>
-      <option>2</option>
-      <option>3</option>
-      <option>4</option>
-      <option>5</option>
+      <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
     </select>
-    <button onclick="loadTasks()">筛选刷新</button>
-    <button class="reset-btn" onclick="resetFilter()">重置筛选</button>
+    <button onclick="loadTasks()">筛选</button>
   </div>
 
-  <!-- 任务列表（首页直接展示+修改） -->
-  <h3>已有任务列表（可编辑）</h3>
+  <!-- 任务列表 -->
   <table>
     <thead>
       <tr>
-        <th>客户</th>
+        <th>客户名称</th>
         <th>设备类型</th>
         <th>层级</th>
         <th>负责人</th>
@@ -135,40 +71,44 @@
   </table>
 </div>
 
-<!-- 编辑弹窗 -->
-<div class="modal" id="editModal">
+<!-- 新建/编辑 弹窗 -->
+<div class="modal" id="taskModal">
   <div class="modal-box">
-    <h3>编辑任务</h3>
+    <h3 id="modalTitle">新建任务</h3>
     <input type="hidden" id="editId">
+
     <div class="form-grid">
-      <div class="form-group"><label>客户名称</label><input id="eCustomer" type="text"></div>
-      <div class="form-group"><label>设备类型</label><input id="eDeviceType" type="text"></div>
-      <div class="form-group"><label>设备编号</label><input id="eDeviceCode" type="text"></div>
-      <div class="form-group"><label>设备序列号</label><input id="eSerial" type="text"></div>
-      <div class="form-group"><label>负责人</label><input id="eManager" type="text"></div>
+      <div class="form-group"><label>客户名称</label><input id="customer"></div>
+      <div class="form-group"><label>设备类型</label><input id="deviceType"></div>
+      <div class="form-group"><label>设备编号</label><input id="deviceCode"></div>
+      <div class="form-group"><label>设备序列号</label><input id="serial"></div>
+      <div class="form-group"><label>负责人</label><input id="manager"></div>
       <div class="form-group">
         <label>任务层级</label>
-        <select id="eLevel">
-          <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-        </select>
+        <select id="level"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
       </div>
-      <div class="form-group" style="grid-column: span 2;">
+
+      <div class="form-group" style="grid-column:span2">
         <label>任务内容</label>
-        <textarea id="eTaskContent"></textarea>
+        <textarea id="taskContent"></textarea>
       </div>
-      <div class="form-group"><label>计划开始</label><input id="ePlanStart" type="date" onchange="eCalcPlanDays()"></div>
-      <div class="form-group"><label>计划结束</label><input id="ePlanEnd" type="date" onchange="eCalcPlanDays()"></div>
-      <div class="form-group"><label>计划工期</label><input id="ePlanHour" type="text" readonly></div>
-      <div class="form-group"><label>实际开始</label><input id="eRealStart" type="date"></div>
-      <div class="form-group"><label>实际结束</label><input id="eRealEnd" type="date"></div>
-      <div class="form-group"><label>实际工期</label><input id="eRealHour" type="text"></div>
+
+      <div class="form-group"><label>计划开始</label><input type="date" id="planStart" onchange="calcDays()"></div>
+      <div class="form-group"><label>计划结束</label><input type="date" id="planEnd" onchange="calcDays()"></div>
+      <div class="form-group"><label>计划工期（天）</label><input id="planHour" readonly></div>
+      
+      <div class="form-group"><label>实际开始</label><input type="date" id="realStart"></div>
+      <div class="form-group"><label>实际结束</label><input type="date" id="realEnd"></div>
+      <div class="form-group"><label>实际工期</label><input id="realHour"></div>
+
       <div class="form-group">
-        <label>进度：<span id="eProgressText">0%</span></label>
-        <input type="range" id="eProgress" min="0" max="100" value="0" oninput="showEProgress()">
+        <label>进度：<span id="progressText">0%</span></label>
+        <input type="range" id="progress" min="0" max="100" value="0" oninput="showProgress()">
       </div>
+
       <div class="form-group">
         <label>任务状态</label>
-        <select id="eStatus">
+        <select id="status">
           <option>待开始</option>
           <option>进行中</option>
           <option>已逾期</option>
@@ -178,65 +118,78 @@
         </select>
       </div>
     </div>
+
     <div class="modal-btn-group">
-      <button onclick="saveEditTask()">保存修改</button>
+      <button onclick="saveTask()">保存</button>
       <button class="close-btn" onclick="closeModal()">关闭</button>
     </div>
   </div>
 </div>
 
 <script>
-// 新建页计划工期自动计算
-function calcPlanDays() {
-  let startVal = document.getElementById('planStart').value;
-  let endVal = document.getElementById('planEnd').value;
-  if(!startVal || !endVal) {
-    document.getElementById('planHour').value = '';
-    return;
-  }
-  let start = new Date(startVal);
-  let end = new Date(endVal);
-  let diffDay = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-  if(diffDay < 1) diffDay = 1;
-  document.getElementById('planHour').value = diffDay + ' 天';
-}
-// 编辑页计划工期自动计算
-function eCalcPlanDays() {
-  let startVal = document.getElementById('ePlanStart').value;
-  let endVal = document.getElementById('ePlanEnd').value;
-  if(!startVal || !endVal) {
-    document.getElementById('ePlanHour').value = '';
-    return;
-  }
-  let start = new Date(startVal);
-  let end = new Date(endVal);
-  let diffDay = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-  if(diffDay < 1) diffDay = 1;
-  document.getElementById('ePlanHour').value = diffDay + ' 天';
+// 自动计算计划工期天数
+function calcDays() {
+  let s = document.getElementById('planStart').value;
+  let e = document.getElementById('planEnd').value;
+  if (!s || !e) return;
+  let days = Math.ceil((new Date(e) - new Date(s)) / (1000*60*60*24)) + 1;
+  document.getElementById('planHour').value = days > 0 ? days + ' 天' : '1 天';
 }
 
-// 新建页进度条显示百分比
-function showProgress(){
-  let val = document.getElementById('progress').value;
-  document.getElementById('progressText').innerText = val + '%';
-}
-// 编辑弹窗进度条
-function showEProgress(){
-  let val = document.getElementById('eProgress').value;
-  document.getElementById('eProgressText').innerText = val + '%';
+// 进度条显示
+function showProgress() {
+  let v = document.getElementById('progress').value;
+  document.getElementById('progressText').innerText = v + '%';
 }
 
-// 重置筛选条件
-function resetFilter(){
-  document.getElementById('fCustomer').value = '';
-  document.getElementById('fLevel').value = '';
-  loadTasks();
+// 打开新建
+function openNewTask() {
+  document.getElementById('modalTitle').innerText = '新建任务';
+  document.getElementById('editId').value = '';
+  document.querySelectorAll('#taskModal input, #taskModal select, #taskModal textarea').forEach(i => i.value = '');
+  document.getElementById('progressText').innerText = '0%';
+  document.getElementById('taskModal').style.display = 'flex';
 }
 
-// 保存新建任务
+// 打开编辑
+function openEdit(id) {
+  let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+  let t = tasks.find(x => x.id === id);
+  if (!t) return;
+
+  document.getElementById('modalTitle').innerText = '编辑任务';
+  document.getElementById('editId').value = id;
+  document.getElementById('customer').value = t.customer || '';
+  document.getElementById('deviceType').value = t.deviceType || '';
+  document.getElementById('deviceCode').value = t.deviceCode || '';
+  document.getElementById('serial').value = t.serial || '';
+  document.getElementById('manager').value = t.manager || '';
+  document.getElementById('level').value = t.level || '1';
+  document.getElementById('taskContent').value = t.taskContent || '';
+  document.getElementById('planStart').value = t.planStart || '';
+  document.getElementById('planEnd').value = t.planEnd || '';
+  document.getElementById('planHour').value = t.planHour || '';
+  document.getElementById('realStart').value = t.realStart || '';
+  document.getElementById('realEnd').value = t.realEnd || '';
+  document.getElementById('realHour').value = t.realHour || '';
+  document.getElementById('progress').value = t.progress || 0;
+  document.getElementById('progressText').innerText = (t.progress || 0) + '%';
+  document.getElementById('status').value = t.status || '待开始';
+
+  document.getElementById('taskModal').style.display = 'flex';
+}
+
+// 关闭弹窗
+function closeModal() {
+  document.getElementById('taskModal').style.display = 'none';
+}
+
+// 保存（新建/编辑通用）
 function saveTask() {
-  const task = {
-    id: Date.now(),
+  let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+  let id = document.getElementById('editId').value;
+
+  let data = {
     customer: document.getElementById('customer').value,
     deviceType: document.getElementById('deviceType').value,
     deviceCode: document.getElementById('deviceCode').value,
@@ -254,116 +207,69 @@ function saveTask() {
     status: document.getElementById('status').value
   };
 
-  let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
-  tasks.unshift(task);
+  if (id) {
+    // 编辑
+    let idx = tasks.findIndex(x => x.id == id);
+    tasks[idx] = { ...tasks[idx], ...data };
+  } else {
+    // 新建
+    tasks.unshift({ id: Date.now(), ...data });
+  }
+
   localStorage.setItem('tasks', JSON.stringify(tasks));
-  alert('任务创建成功！');
-  document.querySelectorAll('input,select,textarea').forEach(el => el.value = '');
-  document.getElementById('progressText').innerText = '0%';
+  closeModal();
   loadTasks();
+  alert('保存成功！');
 }
 
-// 加载+筛选任务（修复：模糊匹配+逻辑正确）
-function loadTasks() {
-  const fCust = document.getElementById('fCustomer').value.toLowerCase().trim();
-  const fLev = document.getElementById('fLevel').value;
+// 加载客户下拉选项（自动去重）
+function loadCustomerOptions() {
+  let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+  let customers = [...new Set(tasks.map(t => t.customer).filter(Boolean))];
+  let sel = document.getElementById('fCustomer');
+  sel.innerHTML = '<option value="">全部客户</option>';
+  customers.forEach(c => {
+    let opt = document.createElement('option');
+    opt.value = c;
+    opt.innerText = c;
+    sel.appendChild(opt);
+  });
+}
 
+// 加载并筛选任务
+function loadTasks() {
+  loadCustomerOptions();
+  let fCust = document.getElementById('fCustomer').value;
+  let fLev = document.getElementById('fLevel').value;
   let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
 
-  // 修复：筛选逻辑正确，模糊匹配客户名称
   let filtered = tasks.filter(t => {
-    let match = true;
-    // 客户名称：有输入则模糊包含，无则通过
-    if(fCust && !t.customer.toLowerCase().includes(fCust)) match = false;
-    // 层级：有选择则精准匹配，无则通过
-    if(fLev && t.level !== fLev) match = false;
-    return match;
+    if (fCust && t.customer !== fCust) return false;
+    if (fLev && t.level !== fLev) return false;
+    return true;
   });
 
-  const tbody = document.getElementById('taskTable');
-  tbody.innerHTML = '';
+  let tb = document.getElementById('taskTable');
+  tb.innerHTML = '';
   filtered.forEach(t => {
-    const tr = document.createElement('tr');
+    let tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${t.customer}</td>
-      <td>${t.deviceType}</td>
+      <td>${t.customer || '-'}</td>
+      <td>${t.deviceType || '-'}</td>
       <td>${t.level}</td>
-      <td>${t.manager}</td>
+      <td>${t.manager || '-'}</td>
       <td class="content-col">${t.taskContent || '-'}</td>
       <td>${t.planHour || '-'}</td>
       <td>${t.progress}%</td>
       <td>${t.status}</td>
       <td><button class="edit-btn" onclick="openEdit(${t.id})">编辑</button></td>
     `;
-    tbody.appendChild(tr);
+    tb.appendChild(tr);
   });
 }
 
-// 打开编辑弹窗
-function openEdit(id){
-  let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
-  let task = tasks.find(x=>x.id === id);
-  if(!task)return;
-
-  document.getElementById('editId').value = task.id;
-  document.getElementById('eCustomer').value = task.customer;
-  document.getElementById('eDeviceType').value = task.deviceType;
-  document.getElementById('eDeviceCode').value = task.deviceCode;
-  document.getElementById('eSerial').value = task.serial;
-  document.getElementById('eManager').value = task.manager;
-  document.getElementById('eLevel').value = task.level;
-  document.getElementById('eTaskContent').value = task.taskContent;
-  document.getElementById('ePlanStart').value = task.planStart;
-  document.getElementById('ePlanEnd').value = task.planEnd;
-  document.getElementById('ePlanHour').value = task.planHour || '';
-  document.getElementById('eRealStart').value = task.realStart;
-  document.getElementById('eRealEnd').value = task.realEnd;
-  document.getElementById('eRealHour').value = task.realHour;
-  document.getElementById('eProgress').value = task.progress;
-  document.getElementById('eProgressText').innerText = task.progress + '%';
-  document.getElementById('eStatus').value = task.status;
-
-  document.getElementById('editModal').style.display = 'flex';
-}
-
-// 关闭弹窗
-function closeModal(){
-  document.getElementById('editModal').style.display = 'none';
-}
-
-// 保存编辑
-function saveEditTask(){
-  let id = parseInt(document.getElementById('editId').value);
-  let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
-  let idx = tasks.findIndex(x=>x.id === id);
-  if(idx === -1)return;
-
-  tasks[idx].customer = document.getElementById('eCustomer').value;
-  tasks[idx].deviceType = document.getElementById('eDeviceType').value;
-  tasks[idx].deviceCode = document.getElementById('eDeviceCode').value;
-  tasks[idx].serial = document.getElementById('eSerial').value;
-  tasks[idx].manager = document.getElementById('eManager').value;
-  tasks[idx].level = document.getElementById('eLevel').value;
-  tasks[idx].taskContent = document.getElementById('eTaskContent').value;
-  tasks[idx].planStart = document.getElementById('ePlanStart').value;
-  tasks[idx].planEnd = document.getElementById('ePlanEnd').value;
-  tasks[idx].planHour = document.getElementById('ePlanHour').value;
-  tasks[idx].realStart = document.getElementById('eRealStart').value;
-  tasks[idx].realEnd = document.getElementById('eRealEnd').value;
-  tasks[idx].realHour = document.getElementById('eRealHour').value;
-  tasks[idx].progress = document.getElementById('eProgress').value;
-  tasks[idx].status = document.getElementById('eStatus').value;
-
-  localStorage.setItem('tasks', JSON.stringify(tasks));
-  closeModal();
-  alert('修改保存成功！');
-  loadTasks();
-}
-
-// 页面初次加载
-window.onload = function(){
-  loadTasks();
-}
+// 初始化
+window.onload = loadTasks;
 </script>
 </body>
 </html>
