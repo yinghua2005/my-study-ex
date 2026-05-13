@@ -6,19 +6,36 @@
   <style>
     * {margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif;}
     body {background:#f5f7fa;padding:20px;}
-    .container {max-width:1200px;margin:0 auto;background:white;padding:30px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1);}
-    .top-bar {display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+    .container {max-width:1400px;margin:0 auto;}
+    .top-bar {display:flex;justify-content:space-between;align-items:center;background:white;padding:20px;border-radius:10px;margin-bottom:20px;box-shadow:0 2px 5px #00000010;}
     .top-bar h2 {color:#333;}
     .btn-add {background:#28a745;color:white;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;}
-    .filter-bar {display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid #eee;}
+    .filter-bar {display:flex;flex-wrap:wrap;gap:10px;background:white;padding:15px;border-radius:10px;margin-bottom:20px;box-shadow:0 2px 5px #00000010;}
     select, input {padding:10px;border:1px solid #ddd;border-radius:6px;min-width:160px;}
     button {padding:10px 20px;background:#007bff;color:white;border:none;border-radius:6px;cursor:pointer;}
-    table {width:100%;border-collapse:collapse;margin-top:10px;}
-    th, td {padding:10px;border:1px solid #ddd;text-align:left;font-size:14px;}
-    th {background:#f0f0f0;}
-    .edit-btn {padding:6px 12px;background:#007bff;color:white;border:none;border-radius:4px;cursor:pointer;}
-    .content-col {max-width:220px;white-space:pre-line;word-break:break-all;}
-    
+
+    /* 卡片布局 */
+    .task-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;}
+    .task-card {background:white;border-radius:12px;padding:20px;box-shadow:0 2px 8px #00000010;border-left:5px solid #007bff;position:relative;}
+    .task-card.l1 {border-left-color:#dc3545;}
+    .task-card h4 {margin-bottom:10px;color:#222;}
+    .task-card p {margin:6px 0;font-size:14px;color:#555;line-height:1.4;}
+    .task-card .label {font-weight:bold;color:#333;display:inline-block;width:70px;}
+    .task-card .progress-bar {height:8px;background:#eee;border-radius:4px;margin:8px 0;overflow:hidden;}
+    .task-card .progress {height:100%;background:#28a745;border-radius:4px;}
+    .task-card .badge {display:inline-block;padding:4px 8px;border-radius:4px;font-size:12px;color:white;background:#6c757d;margin-top:5px;}
+    .badge.wait {background:#6c757d;}
+    .badge.ing {background:#007bff;}
+    .badge.overdue {background:#dc3545;}
+    .badge.done {background:#28a745;}
+    .badge.pause {background:#fd7e14;}
+    .badge.cancel {background:#343a40;}
+
+    .card-btns {display:flex;flex-wrap:wrap;gap:8px;margin-top:15px;}
+    .card-btns button {padding:6px 10px;font-size:13px;}
+    .btn-danger {background:#dc3545;}
+    .btn-secondary {background:#6c757d;}
+
     /* 弹窗 */
     .modal {position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:999;}
     .modal-box {background:white;padding:25px;border-radius:10px;width:90%;max-width:900px;max-height:90vh;overflow-y:auto;}
@@ -40,7 +57,6 @@
     <button class="btn-add" onclick="openNewTask()">新建任务</button>
   </div>
 
-  <!-- 筛选栏：客户下拉 + 层级下拉 -->
   <div class="filter-bar">
     <select id="fCustomer">
       <option value="">全部客户</option>
@@ -52,30 +68,16 @@
     <button onclick="loadTasks()">筛选</button>
   </div>
 
-  <!-- 任务列表 -->
-  <table>
-    <thead>
-      <tr>
-        <th>客户名称</th>
-        <th>设备类型</th>
-        <th>层级</th>
-        <th>负责人</th>
-        <th>任务内容</th>
-        <th>计划工期</th>
-        <th>进度</th>
-        <th>状态</th>
-        <th>操作</th>
-      </tr>
-    </thead>
-    <tbody id="taskTable"></tbody>
-  </table>
+  <!-- 卡片列表 -->
+  <div class="task-grid" id="taskGrid"></div>
 </div>
 
-<!-- 新建/编辑 弹窗 -->
+<!-- 弹窗 -->
 <div class="modal" id="taskModal">
   <div class="modal-box">
     <h3 id="modalTitle">新建任务</h3>
     <input type="hidden" id="editId">
+    <input type="hidden" id="parentId">
 
     <div class="form-grid">
       <div class="form-group"><label>客户名称</label><input id="customer"></div>
@@ -88,7 +90,7 @@
         <select id="level"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
       </div>
 
-      <div class="form-group" style="grid-column:span2">
+      <div class="form-group" style="grid-column:span 2;">
         <label>任务内容</label>
         <textarea id="taskContent"></textarea>
       </div>
@@ -109,12 +111,7 @@
       <div class="form-group">
         <label>任务状态</label>
         <select id="status">
-          <option>待开始</option>
-          <option>进行中</option>
-          <option>已逾期</option>
-          <option>已完成</option>
-          <option>暂停中</option>
-          <option>已取消</option>
+          <option>待开始</option><option>进行中</option><option>已逾期</option><option>已完成</option><option>暂停中</option><option>已取消</option>
         </select>
       </div>
     </div>
@@ -127,7 +124,7 @@
 </div>
 
 <script>
-// 自动计算计划工期天数
+// 自动计算工期
 function calcDays() {
   let s = document.getElementById('planStart').value;
   let e = document.getElementById('planEnd').value;
@@ -146,9 +143,17 @@ function showProgress() {
 function openNewTask() {
   document.getElementById('modalTitle').innerText = '新建任务';
   document.getElementById('editId').value = '';
+  document.getElementById('parentId').value = '';
   document.querySelectorAll('#taskModal input, #taskModal select, #taskModal textarea').forEach(i => i.value = '');
   document.getElementById('progressText').innerText = '0%';
   document.getElementById('taskModal').style.display = 'flex';
+}
+
+// 打开新建子任务
+function openSubTask(parentId) {
+  openNewTask();
+  document.getElementById('parentId').value = parentId;
+  document.getElementById('modalTitle').innerText = '新建子任务';
 }
 
 // 打开编辑
@@ -159,6 +164,7 @@ function openEdit(id) {
 
   document.getElementById('modalTitle').innerText = '编辑任务';
   document.getElementById('editId').value = id;
+  document.getElementById('parentId').value = t.parentId || '';
   document.getElementById('customer').value = t.customer || '';
   document.getElementById('deviceType').value = t.deviceType || '';
   document.getElementById('deviceCode').value = t.deviceCode || '';
@@ -184,10 +190,11 @@ function closeModal() {
   document.getElementById('taskModal').style.display = 'none';
 }
 
-// 保存（新建/编辑通用）
+// 保存（新建/编辑/子任务）
 function saveTask() {
   let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
   let id = document.getElementById('editId').value;
+  let parentId = document.getElementById('parentId').value;
 
   let data = {
     customer: document.getElementById('customer').value,
@@ -204,15 +211,14 @@ function saveTask() {
     realEnd: document.getElementById('realEnd').value,
     realHour: document.getElementById('realHour').value,
     progress: document.getElementById('progress').value,
-    status: document.getElementById('status').value
+    status: document.getElementById('status').value,
+    parentId: parentId || null
   };
 
   if (id) {
-    // 编辑
     let idx = tasks.findIndex(x => x.id == id);
     tasks[idx] = { ...tasks[idx], ...data };
   } else {
-    // 新建
     tasks.unshift({ id: Date.now(), ...data });
   }
 
@@ -222,7 +228,7 @@ function saveTask() {
   alert('保存成功！');
 }
 
-// 加载客户下拉选项（自动去重）
+// 加载客户下拉
 function loadCustomerOptions() {
   let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
   let customers = [...new Set(tasks.map(t => t.customer).filter(Boolean))];
@@ -236,7 +242,16 @@ function loadCustomerOptions() {
   });
 }
 
-// 加载并筛选任务
+// 删除任务
+function deleteTask(id) {
+  if (!confirm('确定要删除此任务吗？')) return;
+  let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+  tasks = tasks.filter(t => t.id !== id);
+  localStorage.setItem('tasks', JSON.stringify(tasks));
+  loadTasks();
+}
+
+// 加载卡片
 function loadTasks() {
   loadCustomerOptions();
   let fCust = document.getElementById('fCustomer').value;
@@ -249,22 +264,40 @@ function loadTasks() {
     return true;
   });
 
-  let tb = document.getElementById('taskTable');
-  tb.innerHTML = '';
+  let grid = document.getElementById('taskGrid');
+  grid.innerHTML = '';
+
   filtered.forEach(t => {
-    let tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${t.customer || '-'}</td>
-      <td>${t.deviceType || '-'}</td>
-      <td>${t.level}</td>
-      <td>${t.manager || '-'}</td>
-      <td class="content-col">${t.taskContent || '-'}</td>
-      <td>${t.planHour || '-'}</td>
-      <td>${t.progress}%</td>
-      <td>${t.status}</td>
-      <td><button class="edit-btn" onclick="openEdit(${t.id})">编辑</button></td>
+    let card = document.createElement('div');
+    card.className = 'task-card ' + (t.level == '1' ? 'l1' : '');
+    
+    let statusClass = '';
+    if(t.status==='待开始') statusClass='wait';
+    else if(t.status==='进行中') statusClass='ing';
+    else if(t.status==='已逾期') statusClass='overdue';
+    else if(t.status==='已完成') statusClass='done';
+    else if(t.status==='暂停中') statusClass='pause';
+    else if(t.status==='已取消') statusClass='cancel';
+
+    card.innerHTML = `
+      <h4>${t.customer || '-'}</h4>
+      <p><span class="label">层级：</span>L${t.level}</p>
+      <p><span class="label">设备：</span>${t.deviceType || '-'}</p>
+      <p><span class="label">负责人：</span>${t.manager || '-'}</p>
+      <p><span class="label">工期：</span>${t.planHour || '-'}</p>
+      <p><span class="label">内容：</span>${t.taskContent || '-'}</p>
+      <div class="progress-bar">
+        <div class="progress" style="width:${t.progress}%"></div>
+      </div>
+      <p>进度：${t.progress}%</p>
+      <span class="badge ${statusClass}">${t.status}</span>
+      <div class="card-btns">
+        <button onclick="openEdit(${t.id})">编辑</button>
+        <button class="btn-danger" onclick="deleteTask(${t.id})">删除</button>
+        ${t.level == '1' ? `<button class="btn-secondary" onclick="openSubTask(${t.id})">加子任务</button>` : ''}
+      </div>
     `;
-    tb.appendChild(tr);
+    grid.appendChild(card);
   });
 }
 
