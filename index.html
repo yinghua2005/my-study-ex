@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>任务管理系统-首页可编辑版</title>
+  <title>任务管理系统-筛选修复版</title>
   <style>
     * {margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif;}
     body {background:#f5f7fa;padding:20px;}
@@ -20,6 +20,7 @@
     th, td {padding:10px;border:1px solid #ddd;text-align:left;font-size:13px;}
     th {background:#f0f0f0;}
     .edit-btn {padding:5px 10px;background:#28a745;color:white;border:none;border-radius:4px;cursor:pointer;}
+    .reset-btn {background:#6c757d;}
     .content-col {max-width:200px;white-space:pre-line;word-break:break-all;}
     /* 进度条样式 */
     .progress-wrap {display:flex;align-items:center;gap:10px;}
@@ -99,9 +100,9 @@
 
   <button onclick="saveTask()">保存任务</button>
 
-  <!-- 筛选栏 -->
+  <!-- 筛选栏（新增重置按钮） -->
   <div class="filter-bar" style="margin-top:30px;">
-    <input id="fCustomer" placeholder="筛选：客户名称" type="text">
+    <input id="fCustomer" placeholder="筛选：客户名称（模糊）" type="text">
     <select id="fLevel">
       <option value="">全部层级</option>
       <option>1</option>
@@ -111,6 +112,7 @@
       <option>5</option>
     </select>
     <button onclick="loadTasks()">筛选刷新</button>
+    <button class="reset-btn" onclick="resetFilter()">重置筛选</button>
   </div>
 
   <!-- 任务列表（首页直接展示+修改） -->
@@ -154,8 +156,9 @@
         <label>任务内容</label>
         <textarea id="eTaskContent"></textarea>
       </div>
-      <div class="form-group"><label>计划开始</label><input id="ePlanStart" type="date"></div>
-      <div class="form-group"><label>计划结束</label><input id="ePlanEnd" type="date"></div>
+      <div class="form-group"><label>计划开始</label><input id="ePlanStart" type="date" onchange="eCalcPlanDays()"></div>
+      <div class="form-group"><label>计划结束</label><input id="ePlanEnd" type="date" onchange="eCalcPlanDays()"></div>
+      <div class="form-group"><label>计划工期</label><input id="ePlanHour" type="text" readonly></div>
       <div class="form-group"><label>实际开始</label><input id="eRealStart" type="date"></div>
       <div class="form-group"><label>实际结束</label><input id="eRealEnd" type="date"></div>
       <div class="form-group"><label>实际工期</label><input id="eRealHour" type="text"></div>
@@ -183,7 +186,7 @@
 </div>
 
 <script>
-// 计划工期自动计算
+// 新建页计划工期自动计算
 function calcPlanDays() {
   let startVal = document.getElementById('planStart').value;
   let endVal = document.getElementById('planEnd').value;
@@ -197,6 +200,20 @@ function calcPlanDays() {
   if(diffDay < 1) diffDay = 1;
   document.getElementById('planHour').value = diffDay + ' 天';
 }
+// 编辑页计划工期自动计算
+function eCalcPlanDays() {
+  let startVal = document.getElementById('ePlanStart').value;
+  let endVal = document.getElementById('ePlanEnd').value;
+  if(!startVal || !endVal) {
+    document.getElementById('ePlanHour').value = '';
+    return;
+  }
+  let start = new Date(startVal);
+  let end = new Date(endVal);
+  let diffDay = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+  if(diffDay < 1) diffDay = 1;
+  document.getElementById('ePlanHour').value = diffDay + ' 天';
+}
 
 // 新建页进度条显示百分比
 function showProgress(){
@@ -207,6 +224,13 @@ function showProgress(){
 function showEProgress(){
   let val = document.getElementById('eProgress').value;
   document.getElementById('eProgressText').innerText = val + '%';
+}
+
+// 重置筛选条件
+function resetFilter(){
+  document.getElementById('fCustomer').value = '';
+  document.getElementById('fLevel').value = '';
+  loadTasks();
 }
 
 // 保存新建任务
@@ -239,16 +263,19 @@ function saveTask() {
   loadTasks();
 }
 
-// 加载+筛选任务 客户名称、层级
+// 加载+筛选任务（修复：模糊匹配+逻辑正确）
 function loadTasks() {
-  const fCust = document.getElementById('fCustomer').value.toLowerCase();
+  const fCust = document.getElementById('fCustomer').value.toLowerCase().trim();
   const fLev = document.getElementById('fLevel').value;
 
   let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
 
+  // 修复：筛选逻辑正确，模糊匹配客户名称
   let filtered = tasks.filter(t => {
     let match = true;
+    // 客户名称：有输入则模糊包含，无则通过
     if(fCust && !t.customer.toLowerCase().includes(fCust)) match = false;
+    // 层级：有选择则精准匹配，无则通过
     if(fLev && t.level !== fLev) match = false;
     return match;
   });
@@ -288,6 +315,7 @@ function openEdit(id){
   document.getElementById('eTaskContent').value = task.taskContent;
   document.getElementById('ePlanStart').value = task.planStart;
   document.getElementById('ePlanEnd').value = task.planEnd;
+  document.getElementById('ePlanHour').value = task.planHour || '';
   document.getElementById('eRealStart').value = task.realStart;
   document.getElementById('eRealEnd').value = task.realEnd;
   document.getElementById('eRealHour').value = task.realHour;
@@ -319,6 +347,7 @@ function saveEditTask(){
   tasks[idx].taskContent = document.getElementById('eTaskContent').value;
   tasks[idx].planStart = document.getElementById('ePlanStart').value;
   tasks[idx].planEnd = document.getElementById('ePlanEnd').value;
+  tasks[idx].planHour = document.getElementById('ePlanHour').value;
   tasks[idx].realStart = document.getElementById('eRealStart').value;
   tasks[idx].realEnd = document.getElementById('eRealEnd').value;
   tasks[idx].realHour = document.getElementById('eRealHour').value;
