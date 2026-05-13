@@ -2,77 +2,99 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>任务管理系统</title>
+  <title>任务管理系统-紧凑卡片层级版</title>
   <style>
     * {margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif;}
-    body {background:#f5f7fa;padding:20px;}
-    .container {max-width:1400px;margin:0 auto;}
-    .top-bar {display:flex;justify-content:space-between;align-items:center;background:white;padding:20px;border-radius:10px;margin-bottom:20px;box-shadow:0 2px 5px #00000010;}
-    .top-bar h2 {color:#333;}
-    .btn-add {background:#28a745;color:white;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;}
-    .filter-bar {display:flex;flex-wrap:wrap;gap:10px;background:white;padding:15px;border-radius:10px;margin-bottom:20px;box-shadow:0 2px 5px #00000010;}
-    select, input {padding:10px;border:1px solid #ddd;border-radius:6px;min-width:160px;}
-    button {padding:10px 20px;background:#007bff;color:white;border:none;border-radius:6px;cursor:pointer;}
+    body {background:#f5f7fa;padding:15px;}
+    .container {max-width:100%;margin:0 auto;}
 
-    /* 卡片布局 */
-    .task-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;}
-    .task-card {background:white;border-radius:12px;padding:20px;box-shadow:0 2px 8px #00000010;border-left:5px solid #007bff;position:relative;}
+    /* 顶部筛选+新建同行布局 */
+    .header-row {display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;background:#fff;padding:12px 15px;border-radius:8px;box-shadow:0 1px 3px #00000015;margin-bottom:15px;}
+    .filter-wrap {display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+    select {padding:6px 8px;border:1px solid #ddd;border-radius:4px;font-size:13px;min-width:130px;}
+    .btn {padding:6px 14px;border-radius:4px;border:none;cursor:pointer;font-size:13px;}
+    .btn-add {background:#28a745;color:#fff;}
+    .btn-normal {background:#007bff;color:#fff;}
+
+    /* 任务容器 */
+    .task-container {display:flex;flex-direction:column;gap:10px;}
+    /* 父任务卡片 横向铺满 */
+    .task-card {width:100%;background:#fff;border-radius:6px;box-shadow:0 1px 4px #00000015;border-left:4px solid #007bff;padding:10px;}
     .task-card.l1 {border-left-color:#dc3545;}
-    .task-card h4 {margin-bottom:10px;color:#222;}
-    .task-card p {margin:6px 0;font-size:14px;color:#555;line-height:1.4;}
-    .task-card .label {font-weight:bold;color:#333;display:inline-block;width:70px;}
-    .task-card .progress-bar {height:8px;background:#eee;border-radius:4px;margin:8px 0;overflow:hidden;}
-    .task-card .progress {height:100%;background:#28a745;border-radius:4px;}
-    .task-card .badge {display:inline-block;padding:4px 8px;border-radius:4px;font-size:12px;color:white;background:#6c757d;margin-top:5px;}
-    .badge.wait {background:#6c757d;}
-    .badge.ing {background:#007bff;}
-    .badge.overdue {background:#dc3545;}
-    .badge.done {background:#28a745;}
-    .badge.pause {background:#fd7e14;}
-    .badge.cancel {background:#343a40;}
+    /* 子任务缩进 */
+    .sub-task-wrap {margin-left:25px;margin-top:8px;border-left:2px dashed #ccc;padding-left:10px;}
+    .sub-task-card {width:100%;background:#f8f9fa;border-radius:6px;padding:8px;margin-bottom:8px;border-left:3px solid #6c757d;}
 
-    .card-btns {display:flex;flex-wrap:wrap;gap:8px;margin-top:15px;}
-    .card-btns button {padding:6px 10px;font-size:13px;}
-    .btn-danger {background:#dc3545;}
-    .btn-secondary {background:#6c757d;}
+    /* 卡片紧凑内容布局 横向排布 */
+    .card-row {display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:13px;}
+    .card-item {white-space:nowrap;}
+    .card-label {font-weight:bold;color:#333;margin-right:3px;}
+    .progress-mini {width:80px;height:6px;background:#eee;border-radius:3px;overflow:hidden;display:inline-block;vertical-align:middle;}
+    .progress-val {height:100%;background:#28a745;}
+    .status-badge {padding:2px 6px;border-radius:3px;font-size:12px;color:#fff;}
+    .wait {background:#6c757d;}
+    .ing {background:#007bff;}
+    .overdue {background:#dc3545;}
+    .done {background:#28a745;}
+    .pause {background:#fd7e14;}
+    .cancel {background:#343a40;}
 
-    /* 弹窗 */
+    /* 按钮组紧凑 */
+    .card-btns {display:flex;gap:6px;margin-left:auto;}
+    .card-btns button {padding:4px 8px;font-size:12px;border:none;border-radius:3px;cursor:pointer;}
+    .btn-edit {background:#007bff;color:#fff;}
+    .btn-del {background:#dc3545;color:#fff;}
+    .btn-sub {background:#6c757d;color:#fff;}
+    .btn-fold {background:#ffc107;color:#333;}
+
+    /* 弹窗样式 */
     .modal {position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:999;}
-    .modal-box {background:white;padding:25px;border-radius:10px;width:90%;max-width:900px;max-height:90vh;overflow-y:auto;}
-    .modal h3 {margin-bottom:15px;}
-    .form-grid {display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:20px;}
-    .form-group {display:flex;flex-direction:column;gap:5px;}
-    label {font-weight:bold;font-size:14px;}
-    textarea {padding:10px;border:1px solid #ddd;border-radius:6px;min-height:80px;resize:vertical;}
+    .modal-box {background:#fff;padding:20px;border-radius:8px;width:92%;max-width:850px;max-height:90vh;overflow-y:auto;}
+    .modal h3 {margin-bottom:15px;font-size:16px;}
+    .form-grid {display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:15px;}
+    .form-group {display:flex;flex-direction:column;gap:4px;}
+    label {font-size:13px;font-weight:bold;}
+    input,textarea {padding:7px;border:1px solid #ddd;border-radius:4px;font-size:13px;}
+    textarea {min-height:70px;resize:vertical;}
     input[type="range"] {width:100%;}
-    .modal-btn-group {margin-top:20px;display:flex;gap:10px;}
-    .close-btn {background:#6c757d;}
+    .modal-btn-group {margin-top:15px;display:flex;gap:10px;}
+    .close-btn {background:#6c757d;color:#fff;}
   </style>
 </head>
 <body>
-
 <div class="container">
-  <div class="top-bar">
-    <h2>任务管理系统</h2>
-    <button class="btn-add" onclick="openNewTask()">新建任务</button>
+  <!-- 顶部：筛选+新建 同行紧凑布局 -->
+  <div class="header-row">
+    <div class="filter-wrap">
+      <select id="fCustomer">
+        <option value="">全部客户</option>
+      </select>
+      <select id="fDevice">
+        <option value="">全部设备类型</option>
+      </select>
+      <select id="fLevel">
+        <option value="">全部层级</option>
+        <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+      </select>
+      <select id="fStatus">
+        <option value="">全部任务状态</option>
+        <option>待开始</option>
+        <option>进行中</option>
+        <option>已逾期</option>
+        <option>已完成</option>
+        <option>暂停中</option>
+        <option>已取消</option>
+      </select>
+      <button class="btn btn-normal" onclick="loadTasks()">筛选</button>
+    </div>
+    <button class="btn btn-add" onclick="openNewTask()">新建任务</button>
   </div>
 
-  <div class="filter-bar">
-    <select id="fCustomer">
-      <option value="">全部客户</option>
-    </select>
-    <select id="fLevel">
-      <option value="">全部层级</option>
-      <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-    </select>
-    <button onclick="loadTasks()">筛选</button>
-  </div>
-
-  <!-- 卡片列表 -->
-  <div class="task-grid" id="taskGrid"></div>
+  <!-- 任务层级列表容器 -->
+  <div class="task-container" id="taskContainer"></div>
 </div>
 
-<!-- 弹窗 -->
+<!-- 新建/编辑弹窗 -->
 <div class="modal" id="taskModal">
   <div class="modal-box">
     <h3 id="modalTitle">新建任务</h3>
@@ -89,25 +111,20 @@
         <label>任务层级</label>
         <select id="level"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
       </div>
-
       <div class="form-group" style="grid-column:span 2;">
         <label>任务内容</label>
         <textarea id="taskContent"></textarea>
       </div>
-
       <div class="form-group"><label>计划开始</label><input type="date" id="planStart" onchange="calcDays()"></div>
       <div class="form-group"><label>计划结束</label><input type="date" id="planEnd" onchange="calcDays()"></div>
       <div class="form-group"><label>计划工期（天）</label><input id="planHour" readonly></div>
-      
       <div class="form-group"><label>实际开始</label><input type="date" id="realStart"></div>
       <div class="form-group"><label>实际结束</label><input type="date" id="realEnd"></div>
       <div class="form-group"><label>实际工期</label><input id="realHour"></div>
-
       <div class="form-group">
         <label>进度：<span id="progressText">0%</span></label>
         <input type="range" id="progress" min="0" max="100" value="0" oninput="showProgress()">
       </div>
-
       <div class="form-group">
         <label>任务状态</label>
         <select id="status">
@@ -115,15 +132,17 @@
         </select>
       </div>
     </div>
-
     <div class="modal-btn-group">
-      <button onclick="saveTask()">保存</button>
-      <button class="close-btn" onclick="closeModal()">关闭</button>
+      <button class="btn btn-normal" onclick="saveTask()">保存</button>
+      <button class="btn close-btn" onclick="closeModal()">关闭</button>
     </div>
   </div>
 </div>
 
 <script>
+// 存储折叠状态
+let foldState = {};
+
 // 自动计算工期
 function calcDays() {
   let s = document.getElementById('planStart').value;
@@ -149,19 +168,18 @@ function openNewTask() {
   document.getElementById('taskModal').style.display = 'flex';
 }
 
-// 打开新建子任务
+// 新建子任务
 function openSubTask(parentId) {
   openNewTask();
   document.getElementById('parentId').value = parentId;
   document.getElementById('modalTitle').innerText = '新建子任务';
 }
 
-// 打开编辑
+// 编辑任务
 function openEdit(id) {
   let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
   let t = tasks.find(x => x.id === id);
   if (!t) return;
-
   document.getElementById('modalTitle').innerText = '编辑任务';
   document.getElementById('editId').value = id;
   document.getElementById('parentId').value = t.parentId || '';
@@ -181,7 +199,6 @@ function openEdit(id) {
   document.getElementById('progress').value = t.progress || 0;
   document.getElementById('progressText').innerText = (t.progress || 0) + '%';
   document.getElementById('status').value = t.status || '待开始';
-
   document.getElementById('taskModal').style.display = 'flex';
 }
 
@@ -190,12 +207,11 @@ function closeModal() {
   document.getElementById('taskModal').style.display = 'none';
 }
 
-// 保存（新建/编辑/子任务）
+// 保存任务
 function saveTask() {
   let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
   let id = document.getElementById('editId').value;
   let parentId = document.getElementById('parentId').value;
-
   let data = {
     customer: document.getElementById('customer').value,
     deviceType: document.getElementById('deviceType').value,
@@ -212,96 +228,150 @@ function saveTask() {
     realHour: document.getElementById('realHour').value,
     progress: document.getElementById('progress').value,
     status: document.getElementById('status').value,
-    parentId: parentId || null
+    parentId: parentId ? Number(parentId) : null
   };
-
   if (id) {
     let idx = tasks.findIndex(x => x.id == id);
     tasks[idx] = { ...tasks[idx], ...data };
   } else {
     tasks.unshift({ id: Date.now(), ...data });
   }
-
   localStorage.setItem('tasks', JSON.stringify(tasks));
   closeModal();
   loadTasks();
-  alert('保存成功！');
 }
 
-// 加载客户下拉
-function loadCustomerOptions() {
+// 加载客户、设备下拉选项
+function loadFilterOptions() {
   let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
   let customers = [...new Set(tasks.map(t => t.customer).filter(Boolean))];
-  let sel = document.getElementById('fCustomer');
-  sel.innerHTML = '<option value="">全部客户</option>';
-  customers.forEach(c => {
-    let opt = document.createElement('option');
-    opt.value = c;
-    opt.innerText = c;
-    sel.appendChild(opt);
-  });
+  let devices = [...new Set(tasks.map(t => t.deviceType).filter(Boolean))];
+  
+  let custSel = document.getElementById('fCustomer');
+  custSel.innerHTML = '<option value="">全部客户</option>';
+  customers.forEach(c => custSel.innerHTML += `<option value="${c}">${c}</option>`);
+
+  let devSel = document.getElementById('fDevice');
+  devSel.innerHTML = '<option value="">全部设备类型</option>';
+  devices.forEach(d => devSel.innerHTML += `<option value="${d}">${d}</option>`);
 }
 
 // 删除任务
 function deleteTask(id) {
-  if (!confirm('确定要删除此任务吗？')) return;
+  if (!confirm('确定删除该任务？')) return;
   let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
-  tasks = tasks.filter(t => t.id !== id);
+  tasks = tasks.filter(t => t.id !== id && t.parentId !== id);
   localStorage.setItem('tasks', JSON.stringify(tasks));
   loadTasks();
 }
 
-// 加载卡片
-function loadTasks() {
-  loadCustomerOptions();
-  let fCust = document.getElementById('fCustomer').value;
-  let fLev = document.getElementById('fLevel').value;
-  let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+// 折叠/展开子任务
+function toggleFold(pid) {
+  foldState[pid] = !foldState[pid];
+  loadTasks();
+}
 
+// 渲染任务 层级+折叠+横向紧凑卡片
+function loadTasks() {
+  loadFilterOptions();
+  let fCust = document.getElementById('fCustomer').value;
+  let fDev = document.getElementById('fDevice').value;
+  let fLev = document.getElementById('fLevel').value;
+  let fStat = document.getElementById('fStatus').value;
+
+  let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+  // 筛选
   let filtered = tasks.filter(t => {
-    if (fCust && t.customer !== fCust) return false;
-    if (fLev && t.level !== fLev) return false;
+    if(fCust && t.customer !== fCust) return false;
+    if(fDev && t.deviceType !== fDev) return false;
+    if(fLev && t.level !== fLev) return false;
+    if(fStat && t.status !== fStat) return false;
     return true;
   });
 
-  let grid = document.getElementById('taskGrid');
-  grid.innerHTML = '';
+  // 区分父任务L1 和 子任务
+  let parentTasks = filtered.filter(t => t.level === '1' && !t.parentId);
+  let subTasks = filtered.filter(t => t.parentId);
 
-  filtered.forEach(t => {
-    let card = document.createElement('div');
-    card.className = 'task-card ' + (t.level == '1' ? 'l1' : '');
-    
-    let statusClass = '';
-    if(t.status==='待开始') statusClass='wait';
-    else if(t.status==='进行中') statusClass='ing';
-    else if(t.status==='已逾期') statusClass='overdue';
-    else if(t.status==='已完成') statusClass='done';
-    else if(t.status==='暂停中') statusClass='pause';
-    else if(t.status==='已取消') statusClass='cancel';
+  let container = document.getElementById('taskContainer');
+  container.innerHTML = '';
 
-    card.innerHTML = `
-      <h4>${t.customer || '-'}</h4>
-      <p><span class="label">层级：</span>L${t.level}</p>
-      <p><span class="label">设备：</span>${t.deviceType || '-'}</p>
-      <p><span class="label">负责人：</span>${t.manager || '-'}</p>
-      <p><span class="label">工期：</span>${t.planHour || '-'}</p>
-      <p><span class="label">内容：</span>${t.taskContent || '-'}</p>
-      <div class="progress-bar">
-        <div class="progress" style="width:${t.progress}%"></div>
+  // 状态样式
+  function getStatusClass(s){
+    if(s==='待开始')return 'wait';
+    if(s==='进行中')return 'ing';
+    if(s==='已逾期')return 'overdue';
+    if(s==='已完成')return 'done';
+    if(s==='暂停中')return 'pause';
+    if(s==='已取消')return 'cancel';
+    return '';
+  }
+
+  // 渲染单个卡片
+  function renderCard(t, isSub=false){
+    let html = `
+      <div class="card-row">
+        <div class="card-item"><span class="card-label">客户:</span>${t.customer||'-'}</div>
+        <div class="card-item"><span class="card-label">设备:</span>${t.deviceType||'-'}</div>
+        <div class="card-item"><span class="card-label">层级:</span>L${t.level}</div>
+        <div class="card-item"><span class="card-label">负责人:</span>${t.manager||'-'}</div>
+        <div class="card-item"><span class="card-label">工期:</span>${t.planHour||'-'}</div>
+        <div class="card-item">
+          <span class="card-label">进度:</span>
+          <div class="progress-mini"><div class="progress-val" style="width:${t.progress}%"></div></div>
+          ${t.progress}%
+        </div>
+        <div class="card-item"><span class="status-badge ${getStatusClass(t.status)}">${t.status}</span></div>
+        <div class="card-btns">
+          ${!isSub ? `<button class="btn-fold" onclick="toggleFold(${t.id})">${foldState[t.id]?'展开':'折叠'}</button>` : ''}
+          ${t.level==='1'&&!isSub?`<button class="btn-sub" onclick="openSubTask(${t.id})">加子任务</button>`:''}
+          <button class="btn-edit" onclick="openEdit(${t.id})">编辑</button>
+          <button class="btn-del" onclick="deleteTask(${t.id})">删除</button>
+        </div>
       </div>
-      <p>进度：${t.progress}%</p>
-      <span class="badge ${statusClass}">${t.status}</span>
-      <div class="card-btns">
-        <button onclick="openEdit(${t.id})">编辑</button>
-        <button class="btn-danger" onclick="deleteTask(${t.id})">删除</button>
-        ${t.level == '1' ? `<button class="btn-secondary" onclick="openSubTask(${t.id})">加子任务</button>` : ''}
+      <div class="card-row" style="margin-top:6px;">
+        <div class="card-item"><span class="card-label">内容:</span>${t.taskContent||'-'}</div>
       </div>
     `;
-    grid.appendChild(card);
+    return html;
+  }
+
+  // 遍历父任务
+  parentTasks.forEach(p=>{
+    let pCard = document.createElement('div');
+    pCard.className = 'task-card l1';
+    pCard.innerHTML = renderCard(p);
+    container.appendChild(pCard);
+
+    // 对应子任务
+    let childs = subTasks.filter(s=>s.parentId === p.id);
+    if(childs.length > 0){
+      let subWrap = document.createElement('div');
+      subWrap.className = 'sub-task-wrap';
+      subWrap.id = 'subWrap_'+p.id;
+      
+      if(!foldState[p.id]){
+        childs.forEach(c=>{
+          let subCard = document.createElement('div');
+          subCard.className = 'sub-task-card';
+          subCard.innerHTML = renderCard(c,true);
+          subWrap.appendChild(subCard);
+        });
+      }
+      container.appendChild(subWrap);
+    }
+  });
+
+  // 非L1独立任务（无父级）
+  let aloneTasks = filtered.filter(t => t.level!=='1' && !t.parentId);
+  aloneTasks.forEach(t=>{
+    let card = document.createElement('div');
+    card.className = 'task-card';
+    card.innerHTML = renderCard(t);
+    container.appendChild(card);
   });
 }
 
-// 初始化
 window.onload = loadTasks;
 </script>
 </body>
