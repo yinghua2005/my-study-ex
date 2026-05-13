@@ -60,12 +60,21 @@
         <textarea id="taskContent" placeholder="请输入详细任务内容"></textarea>
       </div>
 
-      <div class="form-group"><label>计划开始时间</label><input id="planStart" type="datetime-local"></div>
-      <div class="form-group"><label>计划结束时间</label><input id="planEnd" type="datetime-local"></div>
-      <div class="form-group"><label>计划工期</label><input id="planHour" type="text"></div>
-      <div class="form-group"><label>实际开始时间</label><input id="realStart" type="datetime-local"></div>
-      <div class="form-group"><label>实际结束时间</label><input id="realEnd" type="datetime-local"></div>
-      <div class="form-group"><label>实际工期</label><input id="realHour" type="text"></div>
+      <div class="form-group">
+        <label>计划开始时间</label>
+        <input id="planStart" type="date" onchange="calcPlanDays()">
+      </div>
+      <div class="form-group">
+        <label>计划结束时间</label>
+        <input id="planEnd" type="date" onchange="calcPlanDays()">
+      </div>
+      <div class="form-group">
+        <label>计划工期（天，自动计算）</label>
+        <input id="planHour" type="text" readonly placeholder="自动计算天数">
+      </div>
+      <div class="form-group"><label>实际开始时间</label><input id="realStart" type="date"></div>
+      <div class="form-group"><label>实际结束时间</label><input id="realEnd" type="date"></div>
+      <div class="form-group"><label>实际工期</label><input id="realHour" type="text" placeholder="自行填写"></div>
       <div class="form-group"><label>进度（%）</label><input id="progress" type="number" min="0" max="100"></div>
       <div class="form-group"><label>状态</label>
         <select id="status">
@@ -103,6 +112,7 @@
           <th>层级</th>
           <th>负责人</th>
           <th>任务内容</th>
+          <th>计划工期(天)</th>
           <th>状态</th>
           <th>操作</th>
         </tr>
@@ -113,6 +123,22 @@
 </div>
 
 <script>
+// 自动计算计划工期 天数
+function calcPlanDays() {
+  let startVal = document.getElementById('planStart').value;
+  let endVal = document.getElementById('planEnd').value;
+  if(!startVal || !endVal) {
+    document.getElementById('planHour').value = '';
+    return;
+  }
+  let start = new Date(startVal);
+  let end = new Date(endVal);
+  // 计算相差天数
+   let diffDay = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+  if(diffDay < 1) diffDay = 1;
+  document.getElementById('planHour').value = diffDay + ' 天';
+}
+
 // 切换页面
 function switchPage(index) {
   document.querySelectorAll('.page').forEach((p,i) => p.classList.toggle('active', i===index));
@@ -176,6 +202,7 @@ function loadTasks() {
       <td>${t.level}</td>
       <td>${t.manager}</td>
       <td class="content-col">${t.taskContent || '-'}</td>
+      <td>${t.planHour || '-'}</td>
       <td>${t.status}</td>
       <td><button class="edit-btn" onclick="editTask(${t.id})">修改状态</button></td>
     `;
