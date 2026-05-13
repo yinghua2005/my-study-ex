@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>项目甘特图</title>
+  <style>
+    * {margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif;font-size:12px;}
+    body {padding:20px;background:#f5f7fa;}
+
+    .gantt-header {display:flex;align-items:center;justify-content:space-between;margin-bottom:15px;gap:10px;flex-wrap:wrap;}
+    .btn {padding:6px 12px;background:#007bff;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;}
+    .time-controls {display:flex;gap:8px;align-items:center;}
+    .time-btn {padding:4px 10px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;font-size:12px;}
+    .time-btn.active {background:#007bff;color:#fff;border-color:#007bff;}
+    .date-range {display:flex;gap:8px;align-items:center;}
+    input[type="date"], select {padding:4px;border:1px solid #ddd;border-radius:4px;font-size:12px;}
+
+    .filter-wrap {display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+
+    .gantt-container {background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px #00000015;}
+    .gantt-wrapper {overflow-x:auto;position:relative;}
+    .gantt-grid {display:flex;flex-direction:column;}
+
+    .gantt-header-row {display:flex;border-bottom:1px solid #eee;position:sticky;top:0;background:#fff;z-index:10;}
+    .task-col {width:380px;padding:8px;border-right:1px solid #eee;flex-shrink:0;font-size:12px;}
+    .time-col {display:flex;}
+    .time-header {height:36px;display:flex;align-items:center;justify-content:center;border-right:1px solid #eee;font-size:11px;color:#666;white-space:nowrap;}
+
+    .gantt-row {display:flex;border-bottom:1px solid #eee;align-items:center;height:36px;}
+    .task-name-cell {width:380px;padding:6px 8px;border-right:1px solid #eee;display:flex;align-items:center;gap:6px;flex-shrink:0;font-size:12px;}
+    .fold-btn {width:14px;height:14px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;}
+    .fold-btn::before {content:"▶";}
+    .fold-btn.open::before {content:"▼";}
+    .fold-empty {width:14px;height:14px;display:inline-block;}
+    .indent-1 {padding-left:0px;}
+    .indent-2 {padding-left:18px;}
+    .indent-3 {padding-left:36px;}
+    .indent-4 {padding-left:54px;}
+    .indent-5 {padding-left:72px;}
+    .status-tag {padding:2px 5px;border-radius:3px;font-size:11px;color:#fff;margin-left:auto;}
+    .status-wait {background:#6c757d;}
+    .status-ing {background:#007bff;}
+    .status-overdue {background:#dc3545;}
+    .status-done {background:#28a745;}
+    .status-pause {background:#fd7e14;}
+    .status-cancel {background:#343a40;}
+
+    .bars-col {flex:1;position:relative;height:36px;}
+    .gantt-bar-wrap {
+      position:absolute;
+      height:20px;
+      top:8px;
+      border-radius:4px;
+      background:#e2e6ea;
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+    }
+    .gantt-bar-fill {
+      height:100%;
+      background:#28a745;
+      position:absolute;
+      left:0;
+      top:0;
+    }
+    .gantt-bar-text {
+      position:absolute;
+      right:8px;
+      top:0;
+      height:100%;
+      display:flex;
+      align-items:center;
+      font-size:11px;
+      color:#333;
+      white-space:nowrap;
+      z-index:2;
+    }
+    .today-line {position:absolute;width:2px;background:#007bff;top:0;height:100%;z-index:5;}
+  </style>
+</head>
+<body>
+  <div class="gantt-header">
+    <div class="filter-wrap">
+      <select id="fCustomer">
+        <option value="">全部客户</option>
+      </select>
+      <select id="fDevice">
+        <option value="">全部设备类型</option>
+      </select>
+      <select id="fStatus">
+        <option value="">全部状态</option>
+        <option>待开始</option>
+        <option>进行中</option>
+        <option>已逾期</option>
+        <option>已完成</option>
+        <option>暂停中</option>
+        <option>已取消</option>
+      </select>
+      <input type="date" id="startDate">
+      <span>至</span>
+      <input type="date" id="endDate">
+      <button class="btn" onclick="renderGantt()">筛选</button>
+    </div>
+
+    <div class="time-controls">
+      <button class="time-btn active" data-scale="day">天</button>
+      <button class="time-btn" data-scale="week">周</button>
+      <button class="time-btn" data-scale="month">月</button>
+      <a href="index.html"><button class="btn">返回列表</button></a>
+    </div>
+  </div>
+
+  <div class="gantt-container">
+    <div class="gantt-wrapper" id="ganttWrapper">
+      <div class="gantt-grid" id="ganttGrid"></div>
+    </div>
+  </div>
+
+  <script>
+    let foldState = {};
+    let timeScale = 'day';
+    let unitPixel = 45;
+    let tasks = [];
+    let currL1Id = null;
+
+    // 获取URL参数
+    function getUrlParam(name){
+      let reg = new RegExp("(^|&)"+ name +"=([^&]*)(&|$)");
+      let r = window.location.search.substr(1).match(reg);
+      if(r!=null)return decodeURIComponent(r[2]); return null;
+    }
+
+    // 加载筛选下拉选项
+    function loadFilterOptions() {
+      let all = JSON.parse(localStorage.getItem('tasks') || []);
+      let custList = [...new Set(all.map(t => t.customer).filter(Boolean))];
+      let devList = [...new Set(all.map(t => t.deviceType).filter(Boolean))];
+      
+      let custSel = document.getElementById('fCustomer');
+      let devSel = document.getElementById('fDevice');
+      
+      custList.forEach(c => {
+        let opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        custSel.appendChild(opt);
+      });
+      devList.forEach(d => {
+        let opt = document.createElement('option');
+        opt.value = d;
+        opt.textContent = d;
+        devSel.appendChild(opt);
+      });
+
+      // 接收主页传过来的筛选条件
+      let urlCust = getUrlParam('cust') || '';
+      let urlDev = getUrlParam('device') || '';
+      let urlStatus = getUrlParam('status') || '';
+      let sDate = getUrlParam('sdate') || '';
+      let eDate = getUrlParam('edate') || '';
+
+      custSel.value = urlCust;
+      devSel.value = urlDev;
+      document.getElementById('fStatus').value = urlStatus;
+      document.getElementById('startDate').value = sDate;
+      document.getElementById('endDate').value = eDate;
+    }
+
+    // 和主页一致排序
+    function sortByPlanAsc(list){
+      return list.sort((a,b)=>{
+        let da = a.planStart ? new Date(a.planStart) : new Date(9999,12,31);
+        let db = b.planStart ? new Date(b.planStart) : new Date(9999,12,31);
+        return da - db;
+      });
+    }
+
+    // 初始化日期范围 + 过滤任务
+    function initDateRange() {
+      let all = JSON.parse(localStorage.getItem('tasks') || []);
+      currL1Id = getUrlParam('l1Id');
+      
+      // 筛选条件
+      let fcust = document.getElementById('fCustomer').value;
+      let fdev = document.getElementById('fDevice').value;
+      let fstatus = document.getElementById('fStatus').value;
+      let sdate = document.getElementById('startDate').value;
+      let edate = document.getElementById('endDate').value;
+
+      // 只保留当前L1下的任务
+      let filterList = [];
+      if(currL1Id){
+        function getAllChilds(pid){
+          filterList.push(...all.filter(x=>x.id==pid));
+          all.filter(x=>x.parentId==pid).forEach(c=>getAllChilds(c.id));
+        }
+        getAllChilds(Number(currL1Id));
+      }else{
+        filterList = all;
+      }
+
+      // 应用筛选
+      tasks = filterList.filter(t => {
+        if(fcust && t.customer !== fcust) return false;
+        if(fdev && t.deviceType !== fdev) return false;
+        if(fstatus && t.status !== fstatus) return false;
+        if(sdate && t.planStart && new Date(t.planStart) < new Date(sdate)) return false;
+        if(edate && t.planEnd && new Date(t.planEnd) > new Date(edate)) return false;
+        return true;
+      });
+
+      // 自动填充日期范围（空的时候才赋值）
+      let allDates = tasks.flatMap(t => [t.planStart, t.planEnd]).filter(Boolean);
+      if(allDates.length > 0) {
+        let min = new Date(Math.min(...allDates.map(d => new Date(d))));
+        let max = new Date(Math.max(...allDates.map(d => new Date(d))));
+        if(!document.getElementById('startDate').value) document.getElementById('startDate').valueAsDate = min;
+        if(!document.getElementById('endDate').value) document.getElementById('endDate').valueAsDate = max;
+      } else {
+        if(!document.getElementById('startDate').value) document.getElementById('startDate').valueAsDate = new Date();
+        if(!document.getElementById('endDate').value) document.getElementById('endDate').valueAsDate = new Date(Date.now() + 30*24*60*60*1000);
+      }
+    }
+
+    function getUnitDays(){
+      if(timeScale === 'day') return 1;
+      if(timeScale === 'week') return 7;
+      if(timeScale === 'month') return 30;
+      return 1;
+    }
+
+    function getTimeRange() {
+      let start = new Date(document.getElementById('startDate').value);
+      let end = new Date(document.getElementById('endDate').value);
+      return {start, end};
+    }
+
+    function diffDays(d1,d2){
+      return Math.ceil((new Date(d2) - new Date(d1)) / (1000*60*60*24));
+    }
+
+    function renderTimeAxis(range) {
+      let html = '<div class="gantt-header-row"><div class="task-col"></div><div class="time-col">';
+      let current = new Date(range.start);
+      let unitDays = getUnitDays();
+      while(current <= range.end) {
+        let label = '';
+        if(timeScale === 'day') {
+          label = `${current.getMonth()+1}/${current.getDate()}`;
+        } else if(timeScale === 'week') {
+          let weekStart = new Date(current);
+          weekStart.setDate(current.getDate() - current.getDay());
+          label = `${weekStart.getMonth()+1}/${weekStart.getDate()}`;
+        } else {
+          label = `${current.getFullYear()}/${current.getMonth()+1}`;
+        }
+        html += `<div class="time-header" style="min-width:${unitPixel}px">${label}</div>`;
+        current.setDate(current.getDate() + unitDays);
+      }
+      html += '</div></div>';
+      return html;
+    }
+
+    function renderTaskRows(range) {
+      let html = '';
+      let root = sortByPlanAsc(tasks.filter(t => !t.parentId));
+      let unitDays = getUnitDays();
+
+      function renderRow(task) {
+        let level = parseInt(task.level)||1;
+        let hasChildren = tasks.some(t => t.parentId === task.id);
+        let indentClass = `indent-${level}`;
+        
+        // 状态样式
+        let statusClass = '';
+        if(task.status === '待开始') statusClass = 'status-wait';
+        else if(task.status === '进行中') statusClass = 'status-ing';
+        else if(task.status === '已逾期') statusClass = 'status-overdue';
+        else if(task.status === '已完成') statusClass = 'status-done';
+        else if(task.status === '暂停中') statusClass = 'status-pause';
+        else statusClass = 'status-cancel';
+
+        // L1 标题拼接：内容 | 客户 | 设备 | 编号
+        let showName = task.taskContent || '无内容';
+        if(level === 1) {
+          let c = task.customer || '';
+          let d = task.deviceType || '';
+          let code = task.deviceCode || '';
+          showName = `${showName} | ${c} | ${d} | ${code}`;
+        }
+
+        // 无时间直接渲染
+        if(!task.planStart || !task.planEnd){
+          html += `
+          <div class="gantt-row">
+            <div class="task-name-cell ${indentClass}">
+              ${hasChildren ? `<button class="fold-btn ${foldState[task.id] ? 'open' : ''}" onclick="toggleFold(${task.id})"></button>` : '<span class="fold-empty"></span>'}
+              <span>L${level} | ${showName}</span>
+              <span class="status-tag ${statusClass}">${task.status||'待开始'}</span>
+            </div>
+            <div class="bars-col"></div>
+          </div>`;
+          return;
+        }
+
+        // 甘特条计算
+        let startDay = diffDays(range.start, task.planStart);
+        let taskDays = diffDays(task.planStart, task.planEnd) + 1;
+        let left = (startDay / unitDays) * unitPixel;
+        let wrapWidth = (taskDays / unitDays) * unitPixel;
+        let progress = Number(task.progress) || 0;
+        let fillWidth = (progress / 100) * wrapWidth;
+        let manager = task.manager || '无';
+        // 互换：负责人在前，进度在后
+        let barText = `${manager} | ${progress}%`;
+
+        html += `
+          <div class="gantt-row">
+            <div class="task-name-cell ${indentClass}">
+              ${hasChildren ? `<button class="fold-btn ${foldState[task.id] ? 'open' : ''}" onclick="toggleFold(${task.id})"></button>` : '<span class="fold-empty"></span>'}
+              <span>L${level} | ${showName}</span>
+              <span class="status-tag ${statusClass}">${task.status||'待开始'}</span>
+            </div>
+            <div class="bars-col">
+              <div class="gantt-bar-wrap" style="left:${left}px;width:${wrapWidth}px;">
+                <div class="gantt-bar-fill" style="width:${fillWidth}px;"></div>
+                <div class="gantt-bar-text">${barText}</div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        // 子任务渲染（默认折叠不显示）
+        if(hasChildren && foldState[task.id]) {
+          let children = sortByPlanAsc(tasks.filter(x => x.parentId === task.id));
+          children.forEach(c => renderRow(c));
+        }
+      }
+      root.forEach(t => renderRow(t));
+      return html;
+    }
+
+    function renderTodayLine(range) {
+      let today = new Date();
+      let unitDays = getUnitDays();
+      let dayOffset = diffDays(range.start, today);
+      let left = (dayOffset / unitDays) * unitPixel;
+      return `<div class="today-line" style="left:${left}px"></div>`;
+    }
+
+    function renderGantt() {
+      initDateRange();
+      let range = getTimeRange();
+      let html = renderTimeAxis(range) + renderTaskRows(range);
+      document.getElementById('ganttGrid').innerHTML = html;
+      document.querySelector('.bars-col')?.insertAdjacentHTML('beforeend', renderTodayLine(range));
+    }
+
+    function toggleFold(id) {
+      foldState[id] = !foldState[id];
+      renderGantt();
+    }
+
+    // 滚轮缩放
+    document.getElementById('ganttWrapper').addEventListener('wheel', (e) => {
+      e.preventDefault();
+      unitPixel = e.deltaY < 0 ? Math.min(120, unitPixel + 8) : Math.max(25, unitPixel - 8);
+      renderGantt();
+    });
+
+    // 快捷键
+    document.addEventListener('keydown', (e) => {
+      if(e.key === '+' || e.key === '=') unitPixel = Math.min(120, unitPixel +8);
+      if(e.key === '-') unitPixel = Math.max(25, unitPixel -8);
+      if(e.key.toLowerCase() === 'r') unitPixel =45;
+      renderGantt();
+    });
+
+    // 时间尺度切换
+    document.querySelectorAll('.time-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        timeScale = btn.dataset.scale;
+        renderGantt();
+      });
+    });
+
+    window.onload = () => {
+      loadFilterOptions();
+      // 默认全部折叠
+      foldState = {};
+      renderGantt();
+    };
+  </script>
+</body>
+</html>
